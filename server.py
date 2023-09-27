@@ -1,5 +1,7 @@
 #  coding: utf-8 
 import socketserver
+import os
+import mimetypes
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -30,9 +32,53 @@ import socketserver
 class MyWebServer(socketserver.BaseRequestHandler):
     
     def handle(self):
-        self.data = self.request.recv(1024).strip()
+        self.data = self.request.recv(1024).strip().decode('utf-8')
         print ("Got a request of: %s\n" % self.data)
-        self.request.sendall(bytearray("OK",'utf-8'))
+        request_line = self.data.splitlines()[0]
+        method, path, _ = request_line.split()
+        
+        root_dir = "www"
+        filepath = os.path.join(root_dir, path.lstrip("/"))
+
+        # Only allow GET
+        if method != 'GET':
+            self.send_response(405,"Method Not Allowed")
+            return
+        # for secure test_get_group
+        if ".." in path:
+            self.send_response(404, "Not Found")
+            return
+            
+        # Redirect to directory with trailing slash
+        if os.path.isdir(filepath) and not path.endswith("/"):
+            self.send_redirect_response(path + "/")
+            return
+
+        # Serve the index.html file from directory if it's a directory
+        if os.path.isdir(filepath):
+            filepath = os.path.join(filepath, "index.html")
+        
+        # Check if the file exists and send the response accordingly
+        if os.path.exists(filepath) and os.path.isfile(filepath):
+            with open(filepath, 'r') as file:
+                content = file.read()
+                mime_type, _ = mimetypes.guess_type(filepath)
+                self.send_response(200, "OK", content, mime_type)
+        else:
+            self.send_response(404, "Not Found")
+
+    def send_response(self, status_code, status_msg, content="", mime_type="text/html"):
+        response = f"HTTP/1.1 {status_code} {status_msg}\r\n"
+        response += f"Content-Type: {mime_type}\r\n"
+        response += f"Content-Length: {len(content)}\r\n\r\n"
+        response += content
+        self.request.sendall(bytearray(response, 'utf-8'))
+
+    def send_redirect_response(self, location):
+        response = f"HTTP/1.1 301 Moved Permanently\r\n"
+        response += f"Location: {location}\r\n\r\n"
+        self.request.sendall(bytearray(response, 'utf-8'))
+
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
