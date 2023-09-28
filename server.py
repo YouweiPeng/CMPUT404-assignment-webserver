@@ -39,26 +39,17 @@ class MyWebServer(socketserver.BaseRequestHandler):
         
         root_dir = "www"
         filepath = os.path.join(root_dir, path.lstrip("/"))
-
-        # Only allow GET
         if method != 'GET':
             self.send_response(405,"Method Not Allowed")
             return
-        # for secure test_get_group
         if ".." in path:
             self.send_response(404, "Not Found")
             return
-            
-        # Redirect to directory with trailing slash
         if os.path.isdir(filepath) and not path.endswith("/"):
             self.send_redirect_response(path + "/")
             return
-
-        # Serve the index.html file from directory if it's a directory
         if os.path.isdir(filepath):
             filepath = os.path.join(filepath, "index.html")
-        
-        # Check if the file exists and send the response accordingly
         if os.path.exists(filepath) and os.path.isfile(filepath):
             with open(filepath, 'r') as file:
                 content = file.read()
@@ -66,6 +57,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 self.send_response(200, "OK", content, mime_type)
         else:
             self.send_response(404, "Not Found")
+
+
 
     def send_response(self, status_code, status_msg, content="", mime_type="text/html"):
         response = f"HTTP/1.1 {status_code} {status_msg}\r\n"
