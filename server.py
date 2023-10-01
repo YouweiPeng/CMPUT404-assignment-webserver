@@ -45,6 +45,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
         if ".." in path:
             self.send_response(404, "Not Found")
             return
+        if not os.path.isdir(filepath) and  not os.path.isfile(filepath):
+            self.send_response(404, "Not Found")
+            return
         if os.path.isdir(filepath) and not path.endswith("/"):
             self.send_redirect_response(path + "/")
             return
