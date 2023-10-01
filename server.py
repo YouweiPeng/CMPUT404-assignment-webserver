@@ -1,7 +1,6 @@
 #  coding: utf-8 
 import socketserver
 import os
-import mimetypes
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -28,9 +27,11 @@ import mimetypes
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
-
+MIME_TYPES = {
+    ".html": "text/html",
+    ".css": "text/css",
+    }
 class MyWebServer(socketserver.BaseRequestHandler):
-    
     def handle(self):
         self.data = self.request.recv(1024).strip().decode('utf-8')
         # print ("Got a request of: %s\n" % self.data)
@@ -56,11 +57,11 @@ class MyWebServer(socketserver.BaseRequestHandler):
         if os.path.exists(filepath) and os.path.isfile(filepath):
             with open(filepath, 'r') as file:
                 content = file.read()
-                mime_type, _ = mimetypes.guess_type(filepath)
+                ext = os.path.splitext(filepath)[1]
+                mime_type= MIME_TYPES.get(ext)
                 self.send_response(200, "OK", content, mime_type)
         else:
             self.send_response(404, "Not Found")
-
 
 
     def send_response(self, status_code, status_msg, content="", mime_type="text/html"):
